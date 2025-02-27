@@ -617,7 +617,7 @@ with col1:
     
 
 selected_beats = st.multiselect(
-    "Select Beat Names to Check Amount Pending Outlets:",
+    "Select Beat Names here to Check Amount Pending Outlets:",
     options=dff["Final_Beats"].unique(),  
     default=[]  
 )
