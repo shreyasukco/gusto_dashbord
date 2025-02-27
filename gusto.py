@@ -92,14 +92,18 @@ end_date = datetime.today().date()
 filtered_df = df1[(df1['Collection date'] >= start_date) & (df1['Collection date'] <= end_date)]
 
 grouped = filtered_df.groupby('Collection date')[['Return', 'Total Collection','Bad Debts','Canceled Bills']].sum().reset_index()
-# st.write(grouped)
+
 grouped["Total Collection"] -= (grouped["Bad Debts"] + grouped["Return"] + grouped["Canceled Bills"])
 
-# Sort the data by 'Collection date' in descending order
 grouped = grouped.sort_values(by='Collection date', ascending=False)
 
+# Reset index and start from 1 instead of 0
+grouped.reset_index(drop=True, inplace=True)
+grouped.index += 1
+grouped.index.name = "SI No"
 start_date_sidebar = st.sidebar.date_input("Start Date", grouped['Collection date'].min())
 end_date_sidebar = st.sidebar.date_input("End Date", grouped['Collection date'].max())
+mmm=grouped
 month_mapping = {
     "Jan": "January", "Feb": "February", "Mar": "March", "Apr": "April",
     "May": "May", "Jun": "June", "Jul": "July", "Aug": "August",
@@ -314,54 +318,121 @@ def get_formatted_date(date_obj):
     return date_obj.strftime('%Y-%m-%d')   
 
 # yesterday_date = get_formatted_date(datetime.now() - timedelta(1)) 
-col1, col2, col3, col4, col5 = st.columns(5, gap="small", vertical_alignment="top")   
+ 
 
-flattened_list=[]
+# flattened_list=[]
+# if len(df) > 500:
+#     per=22
+# else:
+#     outlet_names = df["Outlets Name"].tolist()
+
+#     def group_similar_names(names, threshold=65):
+#         grouped = []
+#         used_indices = set()  
+
+#         for i, name in enumerate(names):
+#             if i in used_indices:
+#                 continue  # Skip if already grouped
+
+#             group = [name]  # Start a new group
+#             used_indices.add(i)  # Mark this index as used
+
+#             for j, other in enumerate(names[i+1:], start=i+1):  # Check remaining names
+#                 if j not in used_indices and fuzz.ratio(name, other) >= threshold:
+#                     group.append(other)
+#                     used_indices.add(j)  # Mark this index as used
+
+#             grouped.append(group)
+
+#         return grouped
+#     similar_outlet_groups = group_similar_names(outlet_names, threshold=65)
+#     similar_outlet_groups = [group for group in similar_outlet_groups if len(group) > 1]
+
+#     def filter_nearby_outlets(group, df, max_distance=15):
+#         filtered_group = []
+        
+#         for i, outlet in enumerate(group):  
+#             lat1, lon1 = df.loc[df.index[df["Outlets Name"] == outlet][0], ["Latitude", "Longitude"]].values
+#             nearby_outlets = [outlet]  
+
+#             for j, other_outlet in enumerate(group):  
+#                 if i == j:  
+#                     continue
+                
+#                 lat2, lon2 = df.loc[df.index[df["Outlets Name"] == other_outlet][0], ["Latitude", "Longitude"]].values
+#                 distance = geodesic((lat1, lon1), (lat2, lon2)).meters  # Distance in meters
+                
+#                 if distance <= max_distance:
+#                     nearby_outlets.append(other_outlet)
+
+            
+#             if len(nearby_outlets) > 1 and nearby_outlets not in filtered_group:
+#                 filtered_group.append(nearby_outlets)
+        
+#         return filtered_group
+
+#     filtered_groups = [filter_nearby_outlets(group, df) for group in similar_outlet_groups]
+#     filtered_groups = [group for sublist in filtered_groups for group in sublist]
+
+#     # Remove duplicate groups
+#     filtered_groups = [sorted(group) for group in filtered_groups]
+
+#     # Remove duplicate groups
+#     filtered_groups = list(map(list, set(map(tuple, filtered_groups))))
+#     flattened_list = list(itertools.chain.from_iterable(filtered_groups))
+
+#     count1=0
+#     for i in filtered_groups:
+#         a=len(i)
+#         count1 +=a
+#     per = round((count1 / total_rows1) * 100, 2) if count1 > 0 and total_rows1 > 0 else 0
+flattened_list = []
+
 if len(df) > 500:
-    per=22
+    per = 22
 else:
-    outlet_names = df["Outlets Name"].tolist()
+    outlet_details = df[["Outlets Name", "Outlet Erp Id", "Final_Beats"]].values.tolist()  
 
-    def group_similar_names(names, threshold=65):
+    def group_similar_names(details, threshold=65):
         grouped = []
-        used_indices = set()  
+        used_indices = set()
 
-        for i, name in enumerate(names):
+        for i, (name, erp_id, beat) in enumerate(details):
             if i in used_indices:
-                continue  # Skip if already grouped
+                continue  
 
-            group = [name]  # Start a new group
-            used_indices.add(i)  # Mark this index as used
+            group = [(name, erp_id, beat)]  
+            used_indices.add(i)  
 
-            for j, other in enumerate(names[i+1:], start=i+1):  # Check remaining names
-                if j not in used_indices and fuzz.ratio(name, other) >= threshold:
-                    group.append(other)
-                    used_indices.add(j)  # Mark this index as used
+            for j, (other_name, other_erp_id, other_beat) in enumerate(details[i+1:], start=i+1):
+                if j not in used_indices and fuzz.ratio(name, other_name) >= threshold:
+                    group.append((other_name, other_erp_id, other_beat))
+                    used_indices.add(j)  
 
             grouped.append(group)
 
         return grouped
-    similar_outlet_groups = group_similar_names(outlet_names, threshold=65)
+
+    similar_outlet_groups = group_similar_names(outlet_details, threshold=65)
     similar_outlet_groups = [group for group in similar_outlet_groups if len(group) > 1]
 
     def filter_nearby_outlets(group, df, max_distance=15):
         filtered_group = []
         
-        for i, outlet in enumerate(group):  
+        for i, (outlet, erp_id, beat) in enumerate(group):
             lat1, lon1 = df.loc[df.index[df["Outlets Name"] == outlet][0], ["Latitude", "Longitude"]].values
-            nearby_outlets = [outlet]  
+            nearby_outlets = [(outlet, erp_id, beat)]
 
-            for j, other_outlet in enumerate(group):  
-                if i == j:  
+            for j, (other_outlet, other_erp_id, other_beat) in enumerate(group):
+                if i == j:
                     continue
-                
-                lat2, lon2 = df.loc[df.index[df["Outlets Name"] == other_outlet][0], ["Latitude", "Longitude"]].values
-                distance = geodesic((lat1, lon1), (lat2, lon2)).meters  # Distance in meters
-                
-                if distance <= max_distance:
-                    nearby_outlets.append(other_outlet)
 
-            
+                lat2, lon2 = df.loc[df.index[df["Outlets Name"] == other_outlet][0], ["Latitude", "Longitude"]].values
+                distance = geodesic((lat1, lon1), (lat2, lon2)).meters  
+
+                if distance <= max_distance:
+                    nearby_outlets.append((other_outlet, other_erp_id, other_beat))
+
             if len(nearby_outlets) > 1 and nearby_outlets not in filtered_group:
                 filtered_group.append(nearby_outlets)
         
@@ -370,42 +441,46 @@ else:
     filtered_groups = [filter_nearby_outlets(group, df) for group in similar_outlet_groups]
     filtered_groups = [group for sublist in filtered_groups for group in sublist]
 
-    # Remove duplicate groups
-    filtered_groups = [sorted(group) for group in filtered_groups]
+    # Corrected sorting and duplicate removal
+    filtered_groups = [sorted(g, key=lambda x: x[1]) for g in filtered_groups]  
+    filtered_groups = list(map(list, {tuple(g) for g in filtered_groups}))
 
-    # Remove duplicate groups
-    filtered_groups = list(map(list, set(map(tuple, filtered_groups))))
+    # Flatten the list
     flattened_list = list(itertools.chain.from_iterable(filtered_groups))
 
-    count1=0
-    for i in filtered_groups:
-        a=len(i)
-        count1 +=a
+    # Calculate percentage
+    total_rows1 = len(df)  # Ensure this is defined
+    count1 = sum(len(i) for i in filtered_groups)
     per = round((count1 / total_rows1) * 100, 2) if count1 > 0 and total_rows1 > 0 else 0
-    
+df_filtered = pd.DataFrame(flattened_list, columns=["Outlets Name", "Outlet Erp Id", "Final_Beats"])
+df_filtered.reset_index(drop=True, inplace=True)
+df_filtered.index += 1
+df_filtered.index.name = "SI No"
+col1, col2, col3, col4, col5 = st.columns(5, gap="small", vertical_alignment="top")      
 with col1:
-    st.metric(label=f"Matched({formatted_date})", value=str(formatted_amount))
+    st.metric(label=f"Matched Amount ({formatted_date})", value=str(formatted_amount))
 with col2:
-    st.metric(label=f"Unmatched({formatted_date})", value=str(formatted_amount2))
+    st.metric(label=f"Unmatched Amount ({formatted_date})", value=str(formatted_amount2))
 with col3:
-    st.metric(label="Universal Outlets", value=f"{total_rows:,}")
+    st.metric(label="Total Universal Outlets", value=f"{total_rows:,}")
 with col4:
-    st.metric(label=f"Returned Amount", value=str(return_amount))
+    st.metric(label="Total Returned Amount", value=str(return_amount))
 with col5:
-    st.metric(label=f"Collected Amount", value=str(collection_amount))  
+    st.metric(label="Total Collected Amount", value=str(collection_amount))  
 
-col1, col2, col3, col4,col5 = st.columns(5)
+col1, col2, col3, col4, col5 = st.columns(5)
+
 with col1:
-    st.metric(label="Beat Outlets", value=f"{total_rows1:,}")
+    st.metric(label="Total Beat Outlets", value=f"{total_rows1:,}")
 with col2:
-    st.metric(label="Pending Outlets", value=f"{pending_outlets_count:,}")
+    st.metric(label="Total Pending Outlets", value=f"{pending_outlets_count:,}")
 with col3:
-    # st.metric(label="TOTAL pending amount / beat", value=str(formatted_amount4))
-    st.metric(label="TOTAL Pending(11/01/25)", value=str(formatted_amount5))
+    st.metric(label="Total Pending Amount (11/01/25)", value=str(formatted_amount5))
 with col4:
-    st.metric(label=f"Current Pending ({formatted_date})", value=str(formatted_amount3))
+    st.metric(label=f"Current Pending Amount ({formatted_date})", value=str(formatted_amount3))
 with col5:
-    st.metric(label="Dupliucate Per", value=f"{per}%")          
+    st.metric(label="Duplicate Percentage", value=f"{per}%")
+        
 counts = (df['repeated_orders'] == "Repeated").sum()
 
 filtered_df = df[df["repeated_orders"] == "Repeated"]
@@ -417,47 +492,15 @@ st.plotly_chart(fig)
 
 d = dff.groupby("Final_Beats", as_index=False)[["Total Pending(11/01/25)", "Total Pending",]].sum()
 
-selected_beats = st.multiselect(
-    "Select Beat Names:",
-    options=dff["Final_Beats"].unique(),  
-    default=[]  
-)
-# dff = dff.merge(grouped_dp, on='Final_Beats', how='left')
-
-d.index = range(1, len(d) + 1)  # Set index starting from 1
-d.index.name = "Beat No"
-
-d = process_dataframe(d)
-d = d.rename(columns={"Total Pending": f"Total Pending({formatted_date})"})
-col1, col2 = st.columns([2, 1])
-if selected_beats: 
-    fi = dff[dff["Final_Beats"].isin(selected_beats)]
-    pending_outlets_df = fi[fi["Pending_Status"] == "Pending"]
-
-    # Select only the required columns
-    pending_outlets_df = pending_outlets_df[["Final_Beats", "Outlets Name","Total Pending(11/01/25)","Collected Amount" ,"Total Pending","Pending_Percent_diff"]]
-    pending_outlets_df = pending_outlets_df.rename(columns={"Total Pending": f"Total Pending({formatted_date})"})
-    pending_outlets_df = pending_outlets_df.sort_values(by="Final_Beats")
-    pending_outlets_df.index = range(1, len(pending_outlets_df) + 1)  # Set index starting from 1
-    pending_outlets_df.index.name = "SI No"
-    with col1:
-        st.write(pending_outlets_df)
-else:
-    with col1:
-        st.write(d)
-with col2:
-    st.write(grouped)
-st.write(flattened_list)
 long_df = pd.melt(grouped, id_vars=['Collection date'], value_vars=['Return', 'Total Collection'], 
                   var_name='Category', value_name='Amount')
-
 # Create the line chart using Plotly Express
 fig = px.line(
     long_df, 
     x='Collection date', 
     y='Amount', 
     color='Category', 
-    title="Return Amount & Collection Amount over Time", 
+    title="Collection Amount & Return Amount over Time", 
     markers=True, 
     color_discrete_map={"Total Collection": "green", "Return": "blue"},  # Assign custom colors
     template="plotly_white",
@@ -482,7 +525,6 @@ fig.update_layout(
         bordercolor="black",  # Set border color
     )
 )
-
 # Display the plot in Streamlit
 st.plotly_chart(fig)       
 
@@ -560,4 +602,44 @@ else:
         ).add_to(m)
 
     # Display the map in Streamlit
-    st_folium(m, width=900, height=600)
+    st_folium(m, width=1200, height=600)
+    
+col1, col2 = st.columns([2, 2])
+
+with col2:    
+    st.markdown("Duplicate Outlet list in the Selected Beat")
+    st.dataframe(df_filtered, use_container_width=True)  # Expands table fully
+
+with col1:
+    st.markdown("Date-wise Collection and Return Data")
+    st.dataframe(mmm, use_container_width=True)
+  # Use st.dataframe() for consistency
+    
+
+selected_beats = st.multiselect(
+    "Select Beat Names to Check Amount Pending Outlets:",
+    options=dff["Final_Beats"].unique(),  
+    default=[]  
+)
+# dff = dff.merge(grouped_dp, on='Final_Beats', how='left')
+
+d.index = range(1, len(d) + 1)  # Set index starting from 1
+d.index.name = "Beat No"
+
+d = process_dataframe(d)
+d = d.rename(columns={"Total Pending": f"Total Pending({formatted_date})"})
+
+if selected_beats: 
+    fi = dff[dff["Final_Beats"].isin(selected_beats)]
+    pending_outlets_df = fi[fi["Pending_Status"] == "Pending"]
+    # Select only the required columns
+    pending_outlets_df = pending_outlets_df[["Final_Beats", "Outlets Name","Total Pending(11/01/25)","Collected Amount" ,"Total Pending","Pending_Percent_diff"]]
+    pending_outlets_df = pending_outlets_df.rename(columns={"Total Pending": f"Total Pending({formatted_date})"})
+    pending_outlets_df = pending_outlets_df.sort_values(by="Final_Beats")
+    pending_outlets_df.index = range(1, len(pending_outlets_df) + 1)  # Set index starting from 1
+    pending_outlets_df.index.name = "SI No"
+    
+    st.dataframe(pending_outlets_df, use_container_width=True)
+else:
+    st.dataframe(d, use_container_width=True)
+  
