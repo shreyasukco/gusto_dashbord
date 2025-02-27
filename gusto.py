@@ -117,7 +117,7 @@ month_year_options = dp['Month_Year'].unique()
 month_year_options = sorted(dp['Month_Year'].unique(), key=lambda x: pd.to_datetime(x))
 
 start_month, end_month = st.select_slider(
-    "Select Month-Year Range",
+    "Select a Month-Year Range to View the Pending Amount",
     options=month_year_options,
     value=(month_year_options[0],month_year_options[-1])  # Set default value"December 2024"s
 )
@@ -607,7 +607,7 @@ else:
 col1, col2 = st.columns([2, 2])
 
 with col2:    
-    st.markdown("Duplicate Outlet list in the Selected Beat")
+    st.markdown("Duplicate Outlets list in the Selected Beats")
     st.dataframe(df_filtered, use_container_width=True)  # Expands table fully
 
 with col1:
