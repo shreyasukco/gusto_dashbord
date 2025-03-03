@@ -47,6 +47,26 @@ try:
 except FileNotFoundError:
     st.error("The file  was not found. Please check the file path and try again.")
     st.stop()
+# st.write(dp.columns.tolist())
+dp.columns = dp.columns.str.strip()
+
+dp.drop(dp[dp["Particulars"].isin(["(cancelled)", "(cancelled )"])].index, inplace=True)
+
+dp.drop(["Diff","Total Collection"], axis=1, inplace=True)
+
+dp[["Old Collection", "Recent", "Hemant", "My", 
+    "Return", "Bad Debts", "Canceled Bills"]] = (
+    dp[["Old Collection", "Recent", "Hemant", "My", 
+        "Return", "Bad Debts", "Canceled Bills"]]
+    .replace({None: 0, "": 0})  # Replace None and empty strings with 0
+    .apply(pd.to_numeric, errors="coerce")  # Convert to numeric, replacing invalid values with NaN
+    .fillna(0)  # Fill NaN values with 0
+)
+dp["Total Collection"] = dp[["Old Collection", "Recent", "Hemant", "My", 
+                             "Return", "Bad Debts", "Canceled Bills"]].sum(axis=1)
+    
+dp["Diff"] = pd.to_numeric(dp["Gross Total"], errors="coerce").fillna(0) - pd.to_numeric(dp["Total Collection"], errors="coerce").fillna(0)
+# st.write(dp)
 ordercount = pd.read_json("data.json")    
 dp['Collection date'] = pd.to_datetime(dp['Collection date'], dayfirst=True, errors='coerce')
 dm = dm[dm["Month"].notna() & (dm["Month"] != "")]
@@ -241,6 +261,7 @@ mm=dff['invoice clear'].sum()
 # st.write(mm) 
 dff = dff.merge(ordercount, on='Outlet Erp Id', how='left')
 dff["repeated_orders"] = dff.apply(lambda x: "Repeated" if (x["Pending_Status"] == "Pending") or (x["invoice clear"] > 2) else "No reapeat", axis=1)
+
 dynamic_filters = DynamicFilters(dff, filters=["Territory","Final_Beats","Is Active","Pending_Status","Outlets Name"])    
 dynamic_filters.display_filters(location='sidebar')
 df = dynamic_filters.filter_df()
@@ -250,9 +271,9 @@ center_lon = np.mean(df['LONG'])
 # filtered_df['Combined Category'] = filtered_df['Brand Presence'].astype(str) + ' | ' + filtered_df['Milk Products SKUs'].astype(str)
 custom_color_map = {
     "Pending": "red",        
-    "No pending": "green",    
-      
+    "No pending": "green",          
 }
+
 fig = px.scatter_map(
     df, 
     lat="LAT", 
@@ -287,6 +308,7 @@ total_rows1=df.shape[0]
 
 outlet_counts = df['Beats'].value_counts()
 outlet_counts1 = dff['Final_Beats'].value_counts()
+
 pending_outlets_count=df[df["Pending_Status"]=="Pending"].shape[0]
 
 non_null_count = int(result['Total Pending'].sum())
@@ -389,7 +411,7 @@ def get_formatted_date(date_obj):
 flattened_list = []
 
 if len(df) > 500:
-    per = 22
+    per = 13
 else:
     outlet_details = df[["Outlets Name", "Outlet Erp Id", "Final_Beats"]].values.tolist()  
 
@@ -456,17 +478,19 @@ df_filtered = pd.DataFrame(flattened_list, columns=["Outlets Name", "Outlet Erp 
 df_filtered.reset_index(drop=True, inplace=True)
 df_filtered.index += 1
 df_filtered.index.name = "SI No"
+
 col1, col2, col3, col4, col5 = st.columns(5, gap="small", vertical_alignment="top")      
 with col1:
     st.metric(label=f"Matched Amount ({formatted_date})", value=str(formatted_amount))
 with col2:
     st.metric(label=f"Unmatched Amount ({formatted_date})", value=str(formatted_amount2))
 with col3:
-    st.metric(label="Total Universal Outlets", value=f"{total_rows:,}")
+    st.metric(label="Universal Outlets", value=f"{total_rows:,}")
 with col4:
-    st.metric(label="Total Returned Amount", value=str(return_amount))
+    st.metric(label="Pending Amount on(11/01/25)", value=str(formatted_amount5))
+    
 with col5:
-    st.metric(label="Total Collected Amount", value=str(collection_amount))  
+    st.metric(label=f"Current Pending({formatted_date})", value=str(formatted_amount3))
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
@@ -475,9 +499,9 @@ with col1:
 with col2:
     st.metric(label="Total Pending Outlets", value=f"{pending_outlets_count:,}")
 with col3:
-    st.metric(label="Total Pending Amount (11/01/25)", value=str(formatted_amount5))
+    st.metric(label="Returned stock value", value=str(return_amount))
 with col4:
-    st.metric(label=f"Current Pending Amount ({formatted_date})", value=str(formatted_amount3))
+    st.metric(label="Total Collection", value=str(collection_amount))  
 with col5:
     st.metric(label="Duplicate Percentage", value=f"{per}%")
         
@@ -486,8 +510,9 @@ counts = (df['repeated_orders'] == "Repeated").sum()
 filtered_df = df[df["repeated_orders"] == "Repeated"]
 
 # Count the total number of bills where 'repeated_orders' is "Repeated"
-total_bills_count = filtered_df.shape[0]  # Count of rows (bills)
+total_outlets = filtered_df.shape[0]  # Count of rows (bills)
 invoice_clear_count = filtered_df["invoice clear"].sum()
+# st.write(total_outlets)
 st.plotly_chart(fig)
 
 d = dff.groupby("Final_Beats", as_index=False)[["Total Pending(11/01/25)", "Total Pending",]].sum()
