@@ -48,7 +48,7 @@ except FileNotFoundError:
     st.error("The file  was not found. Please check the file path and try again.")
     st.stop()
 st.markdown(
-    "<h4 style='text-align: center;'>Beat Performance & Collection Analytics</h4>",
+    "<h4 style='text-align: left;'>Beat Performance & Collection Analytics</h4>",
     unsafe_allow_html=True
 )    
 # st.write(dp.columns.tolist())
