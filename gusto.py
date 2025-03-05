@@ -659,7 +659,7 @@ f_df=filtered_df
 # st.write(f_df)
 # # Check the length of the DataFrame
 if len(filtered_df) > 500:
-    st.warning("The data contains more than 500 records. Mapping is skipped.")
+    st.warning("Data Contains 500+ Records. Select a Beat to View the Map.")
 else:
     # Initialize a single map
     map_center = [filtered_df["Latitude"].mean(), filtered_df["Longitude"].mean()]
