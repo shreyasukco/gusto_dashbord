@@ -47,6 +47,10 @@ try:
 except FileNotFoundError:
     st.error("The file  was not found. Please check the file path and try again.")
     st.stop()
+st.markdown(
+    "<h4 style='text-align: center;'>Beat Performance & Collection Analytics</h4>",
+    unsafe_allow_html=True
+)    
 # st.write(dp.columns.tolist())
 dp.columns = dp.columns.str.strip()
 
@@ -66,7 +70,7 @@ dp["Total Collection"] = dp[["Old Collection", "Recent", "Hemant", "My",
                              "Return", "Bad Debts", "Canceled Bills"]].sum(axis=1)
     
 dp["Diff"] = pd.to_numeric(dp["Gross Total"], errors="coerce").fillna(0) - pd.to_numeric(dp["Total Collection"], errors="coerce").fillna(0)
-# st.write(dp)
+
 ordercount = pd.read_json("data.json")    
 dp['Collection date'] = pd.to_datetime(dp['Collection date'], dayfirst=True, errors='coerce')
 dm = dm[dm["Month"].notna() & (dm["Month"] != "")]
@@ -121,8 +125,8 @@ grouped = grouped.sort_values(by='Collection date', ascending=False)
 grouped.reset_index(drop=True, inplace=True)
 grouped.index += 1
 grouped.index.name = "SI No"
-start_date_sidebar = st.sidebar.date_input("Start Date", grouped['Collection date'].min())
-end_date_sidebar = st.sidebar.date_input("End Date", grouped['Collection date'].max())
+# start_date_sidebar = st.sidebar.date_input("Start Date", grouped['Collection date'].min())
+# end_date_sidebar = st.sidebar.date_input("End Date", grouped['Collection date'].max())
 mmm=grouped
 month_mapping = {
     "Jan": "January", "Feb": "February", "Mar": "March", "Apr": "April",
@@ -142,6 +146,7 @@ start_month, end_month = st.select_slider(
     value=(month_year_options[0],month_year_options[-1])  # Set default value"December 2024"s
 )
 
+
 dp = dp[
     (dp['Month_Year'].apply(lambda x: month_year_options.index(x)) >= month_year_options.index(start_month)) &
     (dp['Month_Year'].apply(lambda x: month_year_options.index(x)) <= month_year_options.index(end_month))
@@ -153,7 +158,7 @@ selected_months = [
 
 dm = dm[dm['Full_Month'].isin(selected_months)]
 
-filtdf = grouped[(grouped['Collection date'] >= start_date_sidebar) & (grouped['Collection date'] <= end_date_sidebar)]
+filtdf = grouped
 
 # Calculate total Return and Total Collection for the filtered data
 amount = filtdf['Return'].sum()
@@ -211,7 +216,7 @@ dff = dff.merge(grouped_dp, on='Particulars_number', how='left')
 dff["invoice clear"] = dff["invoice clear"].fillna(0)
 
 dff['Pending_Status'] = dff['Total Pending'].apply(
-    lambda x: "Pending" if pd.notna(x) and x > 0 else "No pending"
+    lambda x: "Pending" if pd.notna(x) and x > 0 else "No Dues"
 )
 
 gdp = dm.groupby('Outlet Erp Id', as_index=False)['Total Pending(11/01/25)'].sum()
@@ -271,35 +276,37 @@ center_lon = np.mean(df['LONG'])
 # filtered_df['Combined Category'] = filtered_df['Brand Presence'].astype(str) + ' | ' + filtered_df['Milk Products SKUs'].astype(str)
 custom_color_map = {
     "Pending": "red",        
-    "No pending": "green",          
+    "No Dues": "green",          
 }
 
-fig = px.scatter_map(
+fig = px.scatter_mapbox(
     df, 
     lat="LAT", 
     lon="LONG", 
     hover_name="Final_Beats",
-    hover_data=["Outlets Name","Zone","Region","Territory","Outlets Type"] ,
-    zoom=10,  # Default zoom level; you can adjust this for a better view
-    center={"lat": center_lat, "lon": center_lon},  # Center the map at a specific lat/lon
-    height=600,  # Set the height of the map
+    hover_data=["Outlets Name", "Zone", "Region", "Territory", "Outlets Type"],
+    zoom=10,  
+    center={"lat": center_lat, "lon": center_lon},  
+    height=600,  
     color="Pending_Status",
-    # color_discrete_sequence=px.colors.qualitative.Set1,
     color_discrete_map=custom_color_map,    
 )
+
 fig.update_traces(marker=dict(size=12, opacity=0.8))
 
 # Set the map style (open street map is interactive with drag/zoom)
 fig.update_layout(mapbox_style="open-street-map")
 
+# Add background color (gray)
 fig.update_layout(
     mapbox=dict(
         center={"lat": center_lat, "lon": center_lon},
-        zoom=10,  # Initial zoom level, user can zoom in/out
-        accesstoken="your_mapbox_access_token"  # Optional: If using Mapbox's proprietary styles
+        zoom=10,
+        accesstoken="your_mapbox_access_token"  # Optional for Mapbox styles
     ),
-    margin={"r":0,"t":0,"l":0,"b":0},
-    # Remove margins to ensure full map area
+    margin={"r": 0, "t": 0, "l": 0, "b": 0},  # Remove margins for full view
+    paper_bgcolor="#D3D3D3",  # Light gray background
+    plot_bgcolor="#D3D3D3" # Also set plot background color to gray
 )
 
 total_rows = dff.shape[0]
@@ -479,32 +486,120 @@ df_filtered.reset_index(drop=True, inplace=True)
 df_filtered.index += 1
 df_filtered.index.name = "SI No"
 
-col1, col2, col3, col4, col5 = st.columns(5, gap="small", vertical_alignment="top")      
-with col1:
-    st.metric(label=f"Matched Amount ({formatted_date})", value=str(formatted_amount))
-with col2:
-    st.metric(label=f"Unmatched Amount ({formatted_date})", value=str(formatted_amount2))
-with col3:
-    st.metric(label="Universal Outlets", value=f"{total_rows:,}")
-with col4:
-    st.metric(label="Pending Amount on(11/01/25)", value=str(formatted_amount5))
-    
-with col5:
-    st.metric(label=f"Current Pending({formatted_date})", value=str(formatted_amount3))
+import streamlit as st
 
+# Custom CSS for styling KPIs with fixed height
+st.markdown("""
+    <style>
+    .metric-box {
+        background-color:#000080;
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: bold;
+        height: 120px; /* Fixed height for uniformity */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .metric-label {
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+    .metric-value {
+        font-size: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# First row of KPIs
+col1, col2, col3, col4, col5 = st.columns(5, gap="small")
+
+with col1:
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Matched Amount ({formatted_date})</div>
+            <div class="metric-value">{formatted_amount}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Unmatched Amount ({formatted_date})</div>
+            <div class="metric-value">{formatted_amount2}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Universal Outlets</div>
+            <div class="metric-value">{total_rows:,}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Pending Amount on (11/01/25)</div>
+            <div class="metric-value">{formatted_amount5}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col5:
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Current Pending ({formatted_date})</div>
+            <div class="metric-value">{formatted_amount3}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# Second row of KPIs
+st.write("")
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
-    st.metric(label="Total Beat Outlets", value=f"{total_rows1:,}")
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Total Beat Outlets</div>
+            <div class="metric-value">{total_rows1:,}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
 with col2:
-    st.metric(label="Total Pending Outlets", value=f"{pending_outlets_count:,}")
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Total Pending Outlets</div>
+            <div class="metric-value">{pending_outlets_count:,}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
 with col3:
-    st.metric(label="Returned stock value", value=str(return_amount))
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Returned Stock Value</div>
+            <div class="metric-value">{return_amount}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
 with col4:
-    st.metric(label="Total Collection", value=str(collection_amount))  
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Total Collection</div>
+            <div class="metric-value">{collection_amount}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
 with col5:
-    st.metric(label="Duplicate Percentage", value=f"{per}%")
-        
+    st.markdown(f"""
+        <div class="metric-box">
+            <div class="metric-label">Duplicate Percentage</div>
+            <div class="metric-value">{per}%</div>
+        </div>
+    """, unsafe_allow_html=True)
+st.write("")
 counts = (df['repeated_orders'] == "Repeated").sum()
 
 filtered_df = df[df["repeated_orders"] == "Repeated"]
