@@ -56,7 +56,7 @@ dp.columns = dp.columns.str.strip()
 
 dp.drop(dp[dp["Particulars"].isin(["(cancelled)", "(cancelled )"])].index, inplace=True)
 
-dp.drop(["Diff","Total Collection"], axis=1, inplace=True)
+# dp.drop(["Diff","Total Collection"], axis=1, inplace=True)
 
 dp[["Old Collection", "Recent", "Hemant", "My", 
     "Return", "Bad Debts", "Canceled Bills"]] = (
@@ -270,7 +270,7 @@ dff["repeated_orders"] = dff.apply(lambda x: "Repeated" if (x["Pending_Status"] 
 dynamic_filters = DynamicFilters(dff, filters=["Territory","Final_Beats","Is Active","Pending_Status","Outlets Name"])    
 dynamic_filters.display_filters(location='sidebar')
 df = dynamic_filters.filter_df()
-
+# st.write(df)
 center_lat = np.mean(df['LAT']) 
 center_lon = np.mean(df['LONG'])
 # filtered_df['Combined Category'] = filtered_df['Brand Presence'].astype(str) + ' | ' + filtered_df['Milk Products SKUs'].astype(str)
