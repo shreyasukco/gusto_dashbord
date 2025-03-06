@@ -48,7 +48,7 @@ except FileNotFoundError:
     st.error("The file  was not found. Please check the file path and try again.")
     st.stop()
 st.markdown(
-    "<h4 style='text-align: left;'>Beat Performance & Collection Analytics</h4>",
+    "<h4 style='text-align: left;'>Beat Performance & Collection Analysis</h4>",
     unsafe_allow_html=True
 )    
 # st.write(dp.columns.tolist())
@@ -279,7 +279,7 @@ custom_color_map = {
     "No Dues": "green",          
 }
 
-fig = px.scatter_mapbox(
+fig = px.scatter_map(
     df, 
     lat="LAT", 
     lon="LONG", 
@@ -492,7 +492,7 @@ import streamlit as st
 st.markdown("""
     <style>
     .metric-box {
-        background-color:#000080;
+        background-color: #000080;
         color: white;
         padding: 15px;
         border-radius: 10px;
@@ -502,6 +502,8 @@ st.markdown("""
         display: flex;
         flex-direction: column;
         justify-content: center;
+        border: 2px solid white; /* Red border */
+        box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2); /* Small shadow effect */
     }
     .metric-label {
         font-size: 16px;
@@ -630,21 +632,29 @@ fig = px.line(
 
 # Updating layout with custom styles
 fig.update_layout(
-    xaxis_title="Collection Date",
-    yaxis_title="Amount",
-    font=dict(size=14),
-    legend_title="Category",
-    paper_bgcolor="#f7f9fc",
+    xaxis=dict(
+        title=dict(text="Date of Collection", font=dict(color="black")),  # Updated title with font color
+        tickfont=dict(color="black")  # Change X-axis values to black
+    ),
+    yaxis=dict(
+        title=dict(text="Total Amount", font=dict(color="black")),  # Updated title with font color
+        tickfont=dict(color="black")  # Change Y-axis values to black
+    ),
+    font=dict(size=14),  # Set global font size
+    legend_title="Category",  # Legend title
+    paper_bgcolor="#f7f9fc",  # Background color
     hoverlabel=dict(
         font=dict(
-            family="tahoma,geneva",  # Set font style
+            family="Tahoma, Geneva",  # Set font style
             size=20,  # Set font size
-            color="black"
+            color="black"  # Set font color
         ),
-        bgcolor="white",  # Set background color
-        bordercolor="black",  # Set border color
+        bgcolor="white",  # Set hover label background color
+        bordercolor="black"  # Set hover label border color
     )
 )
+
+
 # Display the plot in Streamlit
 st.plotly_chart(fig)       
 
