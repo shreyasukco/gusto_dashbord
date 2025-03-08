@@ -59,20 +59,25 @@ dp.drop(dp[dp["Particulars"].isin(["(cancelled)", "(cancelled )"])].index, inpla
 # dp.drop(["Diff","Total Collection"], axis=1, inplace=True)
 
 dp[["Old Collection", "Recent", "Hemant", "My", 
-    "Return", "Bad Debts", "Canceled Bills"]] = (
+    "Return", "Bad Debts", "Canceled Bills","Nilesh"]] = (
     dp[["Old Collection", "Recent", "Hemant", "My", 
-        "Return", "Bad Debts", "Canceled Bills"]]
+        "Return", "Bad Debts", "Canceled Bills","Nilesh"]]
     .replace({None: 0, "": 0})  # Replace None and empty strings with 0
     .apply(pd.to_numeric, errors="coerce")  # Convert to numeric, replacing invalid values with NaN
     .fillna(0)  # Fill NaN values with 0
 )
 dp["Total Collection"] = dp[["Old Collection", "Recent", "Hemant", "My", 
-                             "Return", "Bad Debts", "Canceled Bills"]].sum(axis=1)
+                             "Return", "Bad Debts", "Canceled Bills","Nilesh"]].sum(axis=1)
     
 dp["Diff"] = pd.to_numeric(dp["Gross Total"], errors="coerce").fillna(0) - pd.to_numeric(dp["Total Collection"], errors="coerce").fillna(0)
 
 ordercount = pd.read_json("data.json")    
-dp['Collection date'] = pd.to_datetime(dp['Collection date'], dayfirst=True, errors='coerce')
+# dp['Collection date'] = pd.to_datetime(dp['Collection date'], dayfirst=True, errors='coerce')
+# # st.write(dp)
+dp['Collection date'] = pd.to_datetime(dp['Collection date'], format='%m/%d/%Y', errors='coerce')
+
+# Step 2: If you need to display or store in MM/DD/YYYY format
+dp['Collection date_str'] = dp['Collection date'].dt.strftime('%m/%d/%Y')
 dm = dm[dm["Month"].notna() & (dm["Month"] != "")]
 
 dp['Timestamp'] = pd.to_datetime(dp['Date'])
@@ -198,12 +203,12 @@ dp['Sum of Diff'] = pd.to_numeric(dp['Diff'], errors='coerce')
 # st.write(dp)
 dp['invoice clear'] = dp['Sum of Diff'].apply(lambda x: 0 if x <= 0  else 1)
 # st.write(dp)
-monthvisecountofnoneclrbills=dp.groupby("Month",as_index=False)[["Gross Total",'Sum of Diff', 'invoice clear']].sum()
-monthvisecountofnoneclrbills["Month"]=pd.Categorical(monthvisecountofnoneclrbills['Month'], categories=months_list, ordered=True)
-monthvisecountofnoneclrbills = monthvisecountofnoneclrbills.sort_values('Month')
-# st.write(monthvisecountofnoneclrbills)
-sumofgraosstotall=monthvisecountofnoneclrbills["Gross Total"].sum()
-v=monthvisecountofnoneclrbills["invoice clear"].sum()
+# monthvisecountofnoneclrbills=dp.groupby("Month",as_index=False)[["Gross Total",'Sum of Diff', 'invoice clear']].sum()
+# monthvisecountofnoneclrbills["Month"]=pd.Categorical(monthvisecountofnoneclrbills['Month'], categories=months_list, ordered=True)
+# monthvisecountofnoneclrbills = monthvisecountofnoneclrbills.sort_values('Month')
+# # st.write(monthvisecountofnoneclrbills)
+# sumofgraosstotall=monthvisecountofnoneclrbills["Gross Total"].sum()
+# v=monthvisecountofnoneclrbills["invoice clear"].sum()
 dp['Sum of Diff'] = dp['Sum of Diff'].fillna(0)
 grouped_dp = dp.groupby('Particulars_number', as_index=False)[['Sum of Diff', 'invoice clear']].sum()
 m=grouped_dp['invoice clear'].sum()
